@@ -2,112 +2,112 @@
 
 pragma solidity ^0.8.17;
 
+import "./IERC20.sol";
+
 contract MultiSigWallet {
-    event Deposit(address indexed sender, uint amount);
-    // event Submit(uint indexed txId);
-    // event Approve(address indexed owner, uint txId);
-    // event Revoke(address indexed owner, uint txId);
-    // event Execute(uint indexed txId);
+    // event Launch(
+    //     uint id,
+    //     address indexed creator,
+    //     uint goal,
+    //     uint startAt,
+    //     uint endAt
+    // );
+    event Deposit(uint indexed id, address indexed caller, uint amount);
+    event Withdraw(uint indexed id, address indexed caller, uint amount);
+    event Claim(uint id);
+    event Refund(uint indexed id, address indexed caller, uint amount);
 
-    
+    struct Campaign {
+        address creator;
+        // uint goal;
+        uint pledged;
+        // uint32 startAt;
+        // uint32 endAt;
+        bool claimed;
+    }
+
+    // struct Transaction {
+    //     address to;
+    //     uint value;
+    //     bytes data;
+    //     bool executed;
+    // }
 
 
-    struct Transaction {
-        address to;
-        uint value;
-        bytes data;
-        bool executed;
+    constructor (address _token) {
+        token = IERC20(_token);
     }
 
     address[] public owners;
     mapping(address => bool) public isOwner;
-    uint public required;
+    // uint public required;
+    uint public count;
 
     Transaction[] public transactions;
+    mapping(uint => Campaign) public campaigns;
     mapping(uint => mapping(address => bool)) public approved;
+    mapping(uint => mapping(address => uint)) public pledgedAmount;
 
-    modifier onlyOwner() {
-        require(isOwner[msg.sender], "message sender is not owner");
-        _;
+    // function launch() external {
+    //     count += 1;
+    //     campaigns[count] = Campaign ({
+    //         creator: msg.sender,
+    //         goal: _goal,
+    //         pledged: 0,
+    //         startAt: _startAt,
+    //         endAt: _endAt,
+    //         claimed: false
+    //     });
+    //     emit Launch(count, msg.sender, _goal, _startAt, _endAt);
+    // }
+    function deposit(uint _id, uint _amount) external {
+        Campaign storage campaign = campaigns[_id];
+        // require(block.timestamp >= campaign.startAt, "not started");
+        // require(block.timestamp <= campaign.endAt, "ended");
+
+        campaign.pledged += _amount;
+        pledgedAmount[_id][msg.sender] += _amount;
+        token.transferFrom(msg.sender, address(this), _amount);
+
+        emit Deposit(_id, msg.sender, _amount);
     }
-    modifier txExists(uint _txId) {
-        require(_txId < transactions.length, "tx does not exist");
-        _;
+    function unpledge(uint _id, uint _amount) external {
+        Campaign storage campaign = campaigns[_id];
+        // require(block.timestamp <= campaign.endAt, "ended");
+
+        campaign.pledged -= _amount;
+        pledgedAmount[_id][msg.sender] -= _amount;
+        token.transfer(msg.sender, _amount);
+
+        emit Withdraw(_id, msg.sender, _amount);
     }
-    modifier notApproved(uint _txId) {
-        require(!approved[_txId][msg.sender], "tx already approved");
-        _;
+
+    function refund(uint _id) external {
+        Campaign storage campaign = campaigns[_id];
+        // require(block.timestamp >= campaign.endAt, "not ended");
+        // require(campaign.pledged < campaign.goal, "pledged < goal");
+
+        uint bal = pledgedAmount[_id][msg.sender];
+        pledgedAmount[_id][msg.sender] = 0;
+        token.transfer(msg.sender, bal);
     }
-    modifier notExecuted(uint _txId) {
-        require(!transactions[_txId].executed, "tx already executed");
-        _;
+    function claim(uint _id) external {
+        Campaign storage campaign = campaigns[_id];
+        require(msg.sender == campaign.creator, "not creator");
+        // require(block.timestamp >= campaign.endAt, "not ended");
+        // require(campaign.pledged >= campaign.goal, "pledged < goal");
+        require(!campaign.claimed, "already claimed");
+
+        campaign.claimed = true;
+        token.transfer(msg.sender, campaign.pledged);
+
+        emit Claim(_id);
     }
+
+
     
-
-    constructor(address[] memory _owners, uint _required) {
-        require(_owners.length > 0, "owners required");
-        require(_required > 0 && _required <= _owners.length, "invalid required number of owners");
-        for (uint i; i < _owners.length; i++) {
-            address owner = _owners[i];
-            require(owner != address(0), "invalid owner");
-            require(!isOwner[owner], "owner is not unique");
-            isOwner[owner] = true;
-            owners.push(owner);
-        }
-        required = _required;
-    }
-
     receive() external payable {
         emit Deposit(msg.sender, msg.value);
-    }
-
-    function submit(address _to, uint _value, bytes calldata _data)external onlyOwner {
-        transactions.push(Transaction({
-            to: _to,
-            value: _value,
-            data: _data,
-            executed: false
-        }));
-        emit Submit(transactions.length - 1);
-    }
-
-    function approve(uint _txId) 
-    external
-    onlyOwner 
-    txExists(_txId)
-    notApproved(_txId)
-    notExecuted(_txId) 
-    {
-        approved[_txId][msg.sender] = true;
-        emit Approve(msg.sender, _txId);
-    }
-
-    function _getApprovalCount (uint _txId) private view returns (uint count) {
-        for (uint i; i < owners.length; i++) {
-            if (approved[_txId][owners[i]]) {
-            count += 1;
-            }
-        }    
-    }
-
-    function execute(uint _txId) external txExists(_txId) notExecuted(_txId) {
-        require(_getApprovalCount(_txId) >= required, "approvals < required");
-        Transaction storage transaction = transactions [_txId];
-        transaction.executed = true;
-        (bool success, ) = transaction.to.call{value: transaction.value}(transaction.data);
-        require(success, "tx failed");
-        emit Execute(_txId);
-    }
-
-    function revoke(uint _txId)
-    external
-    onlyOwner
-    txExists(_txId)
-    notExecuted(_txId)
-    {
-        require(approved[_txId][msg.sender], "tx not approved");
-        approved[_txId][msg.sender] = false;
-        emit Revoke(msg.sender, _txId);
     }
 
 
