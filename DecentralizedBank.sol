@@ -12,10 +12,11 @@ contract DeBank {
     //     uint startAt,
     //     uint endAt
     // );
-    event Deposit(uint indexed id, address indexed caller, uint amount);
+    event DepositInto(uint indexed id, address indexed caller, uint amount);
     event Withdraw(uint indexed id, address indexed caller, uint amount);
     event Claim(uint id);
     event Refund(uint indexed id, address indexed caller, uint amount);
+    event Deposit(address from, uint amount);
 
     struct Campaign {
         address creator;
@@ -70,7 +71,7 @@ contract DeBank {
         pledgedAmount[_id][msg.sender] += _amount;
         token.transferFrom(msg.sender, address(this), _amount);
 
-        emit Deposit(_id, msg.sender, _amount);
+        emit DepositInto(_id, msg.sender, _amount);
     }
     function unpledge(uint _id, uint _amount) external {
         Campaign storage campaign = campaigns[_id];
@@ -107,9 +108,9 @@ contract DeBank {
 
 
     
-    // receive() external payable {
-    //     emit Deposit(msg.sender, msg.value);
-    // }
+    receive() external payable {
+        emit Deposit(msg.sender, msg.value);
+    }
 
 
 }

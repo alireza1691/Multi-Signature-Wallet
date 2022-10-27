@@ -12,7 +12,7 @@ contract Bet {
         uint startAt,
         uint endAt
     );
-    event Pledge(uint indexed id, address indexed caller, uint amount, uint answerGuessed);
+    event Pledge(uint indexed id, address indexed caller, uint amount, string answerGuessed);
     event Unpledge(uint indexed id, address indexed caller, uint amount);
     event SetWinner(uint winNumber);
     event Claim(uint id);
@@ -32,6 +32,7 @@ contract Bet {
         uint  team2pool;
     }
     address payable owner;
+    uint public leverage;
 
     // struct Transaction {
     //     address to;
@@ -60,7 +61,8 @@ contract Bet {
     mapping(uint => Campaign) public campaigns;
     // mapping(uint => mapping(address => bool)) public approved;
     mapping(uint => mapping(address => uint)) public pledgedAmount;
-    mapping(uint => mapping(address => uint)) public UserAnswer;
+    mapping(uint => mapping(address => uint256)) public UserAnswer;
+    mapping(uint => bool) public isCorrect;
 
     function launch(
         uint _goal,
@@ -71,17 +73,24 @@ contract Bet {
         require(_endAt >= _startAt, "end at < start at");
         require(_endAt <= block.timestamp + 90 days, "end at < max duration");
         count += 1;
-        campaigns[count] = Campaign ({
+        campaigns [count] = Campaign ({
             creator: msg.sender,
             goal: _goal,
             pledged: 0,
             startAt: _startAt,
             endAt: _endAt,
             claimed: false,
-            answer: false
+            correctAnswer: 9,
+            endGameTime: _endAt + 180 minutes,
+            team1pool : 0,
+            drawpool: 0 ,
+            team2pool: 0
         });
         emit Launch(count, msg.sender, _goal, _startAt, _endAt);
     }
+    uint public team1X;
+    uint public drawX;
+    uint public team2X;
     // function startBetting(uint _id, uint _amount, uint _answer) external {
     //     Campaign storage campaign = campaigns[_id];
     //     require(block.timestamp >= campaign.startAt, "not started");
@@ -94,44 +103,47 @@ contract Bet {
 
     //     emit Pledge(_id, msg.sender, _amount, _answer);
     // }
-    function startBettingOnTeam1(uint _id, uint _amount, uint _answer) external {
+    function startBettingOnTeam1(uint _id, uint _amount) external {
         Campaign storage campaign = campaigns[_id];
         require(block.timestamp >= campaign.startAt, "not started");
         require(block.timestamp <= campaign.endAt, "ended");
 
         campaign.team1pool += _amount;
         campaign.pledged += _amount;
-        UserAnswer[_id][msg.sender] = _answer;
+        UserAnswer[_id][msg.sender] = 0;
         pledgedAmount[_id][msg.sender] += _amount;
         token.transferFrom(msg.sender, address(this), _amount);
+        isCorrect[_id] = false;
 
-        emit Pledge(_id, msg.sender, _amount, _answer);
+        emit Pledge(_id, msg.sender, _amount, "team1");
     }
-    function startBettingOnDraw(uint _id, uint _amount, uint _answer) external {
+    function startBettingOnDraw(uint _id, uint _amount) external {
         Campaign storage campaign = campaigns[_id];
         require(block.timestamp >= campaign.startAt, "not started");
         require(block.timestamp <= campaign.endAt, "ended");
 
         campaign.drawpool += _amount;
         campaign.pledged += _amount;
-        UserAnswer[_id][msg.sender] = _answer;
+        UserAnswer[_id][msg.sender] = 1;
         pledgedAmount[_id][msg.sender] += _amount;
         token.transferFrom(msg.sender, address(this), _amount);
+        isCorrect[_id] = false;
 
-        emit Pledge(_id, msg.sender, _amount, _answer);
+        emit Pledge(_id, msg.sender, _amount, "draw");
     }
-    function startBettingOnTeam2(uint _id, uint _amount, uint _answer) external {
+    function startBettingOnTeam2(uint _id, uint _amount) external {
         Campaign storage campaign = campaigns[_id];
         require(block.timestamp >= campaign.startAt, "not started");
         require(block.timestamp <= campaign.endAt, "ended");
 
         campaign.team2pool += _amount;
         campaign.pledged += _amount;
-        UserAnswer[_id][msg.sender] = _answer;
+        UserAnswer[_id][msg.sender] = 2;
         pledgedAmount[_id][msg.sender] += _amount;
         token.transferFrom(msg.sender, address(this), _amount);
+        isCorrect[_id] = false;
 
-        emit Pledge(_id, msg.sender, _amount, _answer);
+        emit Pledge(_id, msg.sender, _amount, "team2");
     }
     function unpledge(uint _id, uint _amount) external {
         Campaign storage campaign = campaigns[_id];
@@ -152,29 +164,48 @@ contract Bet {
         campaign.endGameTime = block.timestamp;
     }
 
-    function calculate(uint _id) external {
+    function CheckAndCalculate(uint _id) external {
         Campaign storage campaign = campaigns[_id];
         require(msg.sender == campaign.creator, "not creator");
         // require(block.timestamp >= campaign.endAt, "not ended");
         // require(campaign.pledged >= campaign.goal, "pledged < goal");
         require(!campaign.claimed, "already claimed");
         uint total;
+        uint WhatUserGuessed;
+        uint WhatIsCorrectAnswer;
         total = campaign.team1pool + campaign.drawpool + campaign.team2pool;
-        campaign.claimed = true;
-        token.transfer(msg.sender, campaign.pledged);
+        team1X = total / campaign.team1pool;
+        drawX = total / campaign.drawpool;
+        team2X = total / campaign.team2pool;
+        WhatIsCorrectAnswer = campaign.correctAnswer;
+        WhatUserGuessed = UserAnswer[_id][msg.sender];
 
-        emit Claim(_id);
+        if ( WhatIsCorrectAnswer == WhatUserGuessed) {
+            isCorrect[_id] = true;
+        }
+        if ( campaign.correctAnswer == 0 ) {
+            leverage = team1X;
+        } else if( campaign.correctAnswer == 1) {
+            leverage = drawX;
+        } else if( campaign.correctAnswer == 2) {
+            leverage = team2X;
+        }
+     
+        token.transfer(msg.sender, campaign.pledged);
     }
 
     function getRewardForWinners(uint _id) external {
         Campaign storage campaign = campaigns[_id];
         require(block.timestamp >= campaign.endGameTime, "not ended");
-        require(campaign.pledged < campaign.goal, "pledged < goal");
+        require(isCorrect[_id] == true, "pledged < goal");
         require(UserAnswer[_id][msg.sender] == campaign.correctAnswer, "You lose because of wrong guess");
+        require(pledgedAmount[_id][msg.sender] >= 0, "empty");
 
-        uint bal = pledgedAmount[_id][msg.sender];
+        uint bal = ((pledgedAmount[_id][msg.sender]) * leverage);
         pledgedAmount[_id][msg.sender] = 0;
         token.transfer(msg.sender, bal);
+
+        emit Claim(_id);
     }
     // function claimLoserFunds(uint _id) external {
     //     Campaign storage campaign = campaigns[_id];
