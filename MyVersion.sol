@@ -25,7 +25,6 @@ contract Bet {
         uint32 startAt;
         uint32 endAt;
         bool claimed;
-        bool answer;
         uint  correctAnswer;
         uint256  endGameTime;
         uint  team1pool;
