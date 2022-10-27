@@ -32,7 +32,7 @@ contract DeBank {
     //     bytes data;
     //     bool executed;
     // }
-
+    IERC20 public immutable token;
     address payable Deployer;
     constructor (address _token) {
         token = IERC20(_token);
@@ -44,7 +44,7 @@ contract DeBank {
     // uint public required;
     uint public count;
 
-    Transaction[] public transactions;
+    // Transaction[] public transactions;
     mapping(uint => Campaign) public campaigns;
     mapping(uint => mapping(address => bool)) public approved;
     mapping(uint => mapping(address => uint)) public pledgedAmount;
@@ -84,7 +84,7 @@ contract DeBank {
     }
 
     function refund(uint _id) external {
-        Campaign storage campaign = campaigns[_id];
+        // Campaign storage campaign = campaigns[_id];
         // require(block.timestamp >= campaign.endAt, "not ended");
         // require(campaign.pledged < campaign.goal, "pledged < goal");
 
@@ -107,9 +107,9 @@ contract DeBank {
 
 
     
-    receive() external payable {
-        emit Deposit(msg.sender, msg.value);
-    }
+    // receive() external payable {
+    //     emit Deposit(msg.sender, msg.value);
+    // }
 
 
 }

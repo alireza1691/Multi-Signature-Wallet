@@ -30,6 +30,8 @@ contract CrowdFund {
     mapping(uint => Campaign) public campaigns;
     mapping(uint => mapping(address => uint)) public pledgedAmount;
 
+    IERC20 public immutable token;
+
     constructor(address _token) {
         token = IERC20(_token);
     }
