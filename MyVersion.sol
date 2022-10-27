@@ -33,7 +33,7 @@ contract MultiSigWallet {
     //     bool executed;
     // }
 
-
+    IERC20 public immutable token;
     constructor (address _token) {
         token = IERC20(_token);
     }
@@ -43,7 +43,7 @@ contract MultiSigWallet {
     // uint public required;
     uint public count;
 
-    Transaction[] public transactions;
+    // Transaction[] public transactions;
     mapping(uint => Campaign) public campaigns;
     mapping(uint => mapping(address => bool)) public approved;
     mapping(uint => mapping(address => uint)) public pledgedAmount;
@@ -106,9 +106,9 @@ contract MultiSigWallet {
 
 
     
-    receive() external payable {
-        emit Deposit(msg.sender, msg.value);
-    }
+    // receive() external payable {
+    //     emit Deposit(msg.sender, msg.value);
+    // }
 
 
 }
