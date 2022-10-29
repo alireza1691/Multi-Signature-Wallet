@@ -1,14 +1,18 @@
 // SPDX-License-Identifier: MIT
-
+/* Author: Alireza Haghshenas
+/ github account : alireza1691
+/ this contract maded for betting on footbal matches
+*/
 pragma solidity ^0.8.17;
 
+//af first we need a token as a payment , then we deploy our ERC20 token
 import "./IERC20.sol";
 
 contract Bet {
+    
     event Launch(
         uint id,
         address indexed creator,
-        uint goal,
         uint startAt,
         uint endAt
     );
@@ -20,7 +24,6 @@ contract Bet {
 
     struct Campaign {
         address creator;
-        uint goal;
         uint pledged;
         uint32 startAt;
         uint32 endAt;
@@ -34,12 +37,6 @@ contract Bet {
     address payable owner;
     uint public leverage;
 
-    // struct Transaction {
-    //     address to;
-    //     uint value;
-    //     bytes data;
-    //     bool executed;
-    // }
 
     IERC20 public immutable token;
     constructor (address _token) {
@@ -51,13 +48,7 @@ contract Bet {
     // mapping(address => bool) public isOwner;
     // uint public required;
     uint public count;
-    // uint public correctAnswer;
-    // uint256 public endGameTime;
-    // uint public team1pool;
-    // uint public drawpool;
-    // uint public team2pool;
 
-    // Transaction[] public transactions;
     mapping(uint => Campaign) public campaigns;
     // mapping(uint => mapping(address => bool)) public approved;
     mapping(uint => mapping(address => uint)) public pledgedAmount;
@@ -65,7 +56,6 @@ contract Bet {
     mapping(uint => bool) public isCorrect;
 
     function launch(
-        uint _goal,
         uint32 _startAt,
         uint32 _endAt
     ) external {
