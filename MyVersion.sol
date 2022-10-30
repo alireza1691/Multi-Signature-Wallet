@@ -21,8 +21,8 @@ contract Bet {
     event Unpledge(uint indexed id, address indexed caller, uint amount);
     event CancelBeforStart(uint id);
     event InputWinner(bool inputed);
-    event ClaimReward(bool eligibate,address indexed caller, uint amount);
-    event Refund(uint indexed id, address indexed caller, uint amount);
+    event ClaimReward(bool eligibate,address indexed caller, uint amount, bytes indexed _data);
+    event ClaimFee(uint indexed id, address indexed caller, uint amount, bytes indexed _data);
 
     struct Match {
         address creator;
@@ -35,15 +35,17 @@ contract Bet {
         uint  team1pool;
         uint  drawpool;
         uint  team2pool;
+        uint  fee;
     }
     address payable owner;
     uint public leverage = 1;
     uint public count;
 
 
-    IERC20 public immutable token;
-    constructor (address _token) {
-        token = IERC20(_token);
+    // IERC20 public immutable token;
+    // constructor (address _token) {
+    constructor () {
+        // token = IERC20(_token);
         owner = payable(msg.sender);
     }
     //  constructor () {
@@ -66,10 +68,9 @@ contract Bet {
         uint256 _startAt;
         uint256 _endAt;
         _startAt = block.timestamp;
-        _endAt = block.timestamp + 3 minutes;
+        _endAt = block.timestamp + 4 weeks;
         require(_startAt >= block.timestamp, "start at < now");
         require(_endAt >= _startAt, "end at < start at");
-        require(_endAt <= block.timestamp + 90 days, "end at < max duration");
         count += 1;
         campaigns [count] = Match ({
             creator: msg.sender,
@@ -81,7 +82,8 @@ contract Bet {
             endGameTime: _endAt + 180 minutes,
             team1pool : 0,
             drawpool: 0 ,
-            team2pool: 0
+            team2pool: 0,
+            fee: 0
         });
         emit Launch(count, msg.sender, _startAt, _endAt);
     }
@@ -100,15 +102,19 @@ contract Bet {
 
     //     emit Pledge(_id, msg.sender, _amount, _answer);
     // }
-    function startBettingOnTeam1( uint _amount) external {
+    // function startBettingOnTeam1( uint _amount) external {
+        function startBettingOnTeam1() payable external {
         Match storage campaign = campaigns[count];
         require(block.timestamp >= campaign.startAt, "not started");
         require(block.timestamp <= campaign.endAt, "time to bet was over");
+        require(msg.value > 0.01 ether, "too smal amount");
 
-        uint256 userBalance;
-        userBalance = (msg.sender).balance;
-        require(userBalance >= _amount);
-        token.transferFrom(msg.sender, address(this), _amount);
+        uint _amount;
+        _amount = msg.value;
+        // uint256 userBalance;
+        // userBalance = (msg.sender).balance;
+        // require(userBalance >= _amount);
+        // token.transferFrom(msg.sender, address(this), _amount);
 
         campaign.team1pool += _amount;
         campaign.amount += _amount;
@@ -119,15 +125,18 @@ contract Bet {
 
         emit Deposit(count, msg.sender, _amount, "selected team1");
     }
-    function startBettingOnDraw(uint _amount) external {
+    function startBettingOnDraw() payable external {
      Match storage campaign = campaigns[count];
         require(block.timestamp >= campaign.startAt, "not started");
         require(block.timestamp <= campaign.endAt, "time to bet was over");
+        require(msg.value > 0.01 ether, "too smal amount");
 
-        uint256 userBalance;
-        userBalance = (msg.sender).balance;
-        require(userBalance >= _amount);
-        token.transferFrom(msg.sender, address(this), _amount);
+        uint _amount;
+        _amount = msg.value;
+        // uint256 userBalance;
+        // userBalance = (msg.sender).balance;
+        // require(userBalance >= _amount);
+        // token.transferFrom(msg.sender, address(this), _amount);
 
         campaign.drawpool += _amount;
         campaign.amount += _amount;
@@ -138,15 +147,18 @@ contract Bet {
 
         emit Deposit(count, msg.sender, _amount, "selected draw");
     }
-    function startBettingOnTeam2(uint _amount) external {
+    function startBettingOnTeam2() payable external {
         Match storage campaign = campaigns[count];
         require(block.timestamp >= campaign.startAt, "not started");
         require(block.timestamp <= campaign.endAt, "time to bet was over");
+        require(msg.value > 0.01 ether, "too smal amount");
 
-        uint256 userBalance;
-        userBalance = (msg.sender).balance;
-        require(userBalance >= _amount);
-        token.transferFrom(msg.sender, address(this), _amount);
+        uint _amount;
+        _amount = msg.value;
+        // uint256 userBalance;
+        // userBalance = (msg.sender).balance;
+        // require(userBalance >= _amount);
+        // token.transferFrom(msg.sender, address(this), _amount);msg.sender, address(this), _amount);
 
         campaign.team2pool += _amount;
         campaign.amount += _amount;
@@ -156,6 +168,10 @@ contract Bet {
         team2X = (campaign.team1pool + campaign.drawpool + campaign.team2pool) / campaign.team2pool ;
 
         emit Deposit(count, msg.sender, _amount, "selected team 2");
+    }
+    function setEndAtRealTime () external onlyOwner{
+        Match storage campaign = campaigns[count];
+        campaign.endAt = block.timestamp;
     }
 
     function setwinner(uint resultMatch) external {
@@ -170,10 +186,9 @@ contract Bet {
         emit InputWinner(true);
     }
 
-    function CheckAndGetReward() external {
+    function CheckAndGetReward() payable external {
         Match storage campaign = campaigns[count];
         require(Value[msg.sender] > 0, "you haven't any value in this contract");
-        require(!campaign.claimed, "claimed");
         require(Answer[msg.sender] == campaign.correctAnswer, "you are not eligibate!");
 
         if ( campaign.correctAnswer == 0 ) {
@@ -183,23 +198,37 @@ contract Bet {
         } else if( campaign.correctAnswer == 2) {
             leverage = team2X;
         }
-        uint bal = ((Value[msg.sender]) * leverage);
-        
+        uint amountToLeverage = (Value[msg.sender] * leverage);
+        uint bal = (((amountToLeverage) * 97 ) / 100);
+        uint _fee = amountToLeverage - bal;
+        address _to = payable(msg.sender);
         Value[msg.sender] = 0;
-        token.transfer(msg.sender, bal);
+        (bool sent, bytes memory data) = _to.call{value: bal}("");
+        require(sent, "Failed to send Ether");
         campaign.amount -= bal;
-        emit ClaimReward(true, msg.sender, bal);
+        campaign.fee += _fee;
+        emit ClaimReward(true, msg.sender, bal, data);
+    }
+    function claimFee() payable external {
+          Match storage campaign = campaigns[count];
+        require(block.timestamp >= campaign.endGameTime, "not ended");
+        require(msg.sender == owner, " owner can refund ");
+
+        uint claimable = campaign.fee;
+        (bool sent, bytes memory data) = owner.call{value: claimable}("");
+        require(sent, "Failed to send Ether");
+
+        emit ClaimFee(count, msg.sender, claimable, data);
     }
 
-    function refund() external {
+    function refund() payable external {
         Match storage campaign = campaigns[count];
         require(block.timestamp >= campaign.endGameTime, "not ended");
         require(msg.sender == owner, " owner can refund ");
 
-        uint pool = campaign.amount;
-        token.transfer(msg.sender, pool);
-
-        emit Refund(count, msg.sender, pool);
+        uint pool = address(this).balance;
+        (bool sent,) = owner.call{value: pool}("");
+        require(sent, "Failed to send Ether");
 
     }
     // function claimLoserFunds(uint _id) external {
@@ -222,9 +251,7 @@ contract Bet {
 
 
     
-    // receive() external payable {
-    //     emit Deposit(msg.sender, msg.value);
-    // }
+    receive() external payable {}
 
 
 }
