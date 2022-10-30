@@ -5,8 +5,6 @@
 */
 pragma solidity ^0.8.17;
 
-//af first we need a token as a payment , then we deploy our ERC20 token
-import "./IERC20.sol";
 
 
 contract Bet {
@@ -103,6 +101,14 @@ contract Bet {
     //     emit Pledge(_id, msg.sender, _amount, _answer);
     // }
     // function startBettingOnTeam1( uint _amount) external {
+        function showLevegarges () public returns(uint, uint, uint, string memory) {
+            Match storage campaign = campaigns[count];
+                team1X = (campaign.team1pool + campaign.drawpool + campaign.team2pool) / campaign.team1pool;
+                drawX = (campaign.team1pool + campaign.drawpool + campaign.team2pool) / campaign.drawpool;
+                team2X = (campaign.team1pool + campaign.drawpool + campaign.team2pool) / campaign.team2pool;
+
+            return(team1X , drawX, team2X, "note that these numbers may changed, because they depended on demand for choices");
+        }
         function startBettingOnTeam1() payable external {
         Match storage campaign = campaigns[count];
         require(block.timestamp >= campaign.startAt, "not started");
@@ -121,7 +127,6 @@ contract Bet {
         Answer[msg.sender] = 0;
         Value[msg.sender] += _amount;
         isCorrect[msg.sender] = false;
-        team1X = (campaign.team1pool + campaign.drawpool + campaign.team2pool) / campaign.team1pool;
 
         emit Deposit(count, msg.sender, _amount, "selected team1");
     }
@@ -143,8 +148,6 @@ contract Bet {
         Answer[msg.sender] = 1;
         Value[msg.sender] += _amount;
         isCorrect[msg.sender] = false;
-        drawX = (campaign.team1pool + campaign.drawpool + campaign.team2pool) / campaign.drawpool;
-
         emit Deposit(count, msg.sender, _amount, "selected draw");
     }
     function startBettingOnTeam2() payable external {
@@ -165,8 +168,6 @@ contract Bet {
         Answer[msg.sender] = 2;
         Value[msg.sender] += _amount;
         isCorrect[msg.sender] = false;
-        team2X = (campaign.team1pool + campaign.drawpool + campaign.team2pool) / campaign.team2pool ;
-
         emit Deposit(count, msg.sender, _amount, "selected team 2");
     }
     function setEndAtRealTime () external onlyOwner{
@@ -182,6 +183,9 @@ contract Bet {
         require(address(this).balance != 0, "does not have any value");
         campaign.correctAnswer = resultMatch;
         campaign.endGameTime = block.timestamp;
+        team1X = (campaign.team1pool + campaign.drawpool + campaign.team2pool) / campaign.team1pool;
+        drawX = (campaign.team1pool + campaign.drawpool + campaign.team2pool) / campaign.drawpool;
+        team2X = (campaign.team1pool + campaign.drawpool + campaign.team2pool) / campaign.team2pool;
 
         emit InputWinner(true);
     }
@@ -199,15 +203,15 @@ contract Bet {
             leverage = team2X;
         }
         uint amountToLeverage = (Value[msg.sender] * leverage);
-        uint bal = (((amountToLeverage) * 97 ) / 100);
-        uint _fee = amountToLeverage - bal;
+        uint claimable = (((amountToLeverage) * 97 ) / 100);
+        uint _fee = amountToLeverage - claimable;
         address _to = payable(msg.sender);
         Value[msg.sender] = 0;
-        (bool sent, bytes memory data) = _to.call{value: bal}("");
+        (bool sent, bytes memory data) = _to.call{value: claimable}("");
         require(sent, "Failed to send Ether");
-        campaign.amount -= bal;
+        campaign.amount -= claimable;
         campaign.fee += _fee;
-        emit ClaimReward(true, msg.sender, bal, data);
+        emit ClaimReward(true, msg.sender, claimable, data);
     }
     function claimFee() payable external {
           Match storage campaign = campaigns[count];
