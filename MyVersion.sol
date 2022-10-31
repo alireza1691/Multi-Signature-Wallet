@@ -60,17 +60,34 @@ contract Bet {
     mapping(address => uint) public Value;
     mapping(address => bool) public isCorrect;
 
-    function sendReward (string calldata _matchName_) external payable onlyOwner{
+    function sendReward () external payable onlyOwner{
+        Match storage _match = Matches[count];
+        require(block.timestamp > _match.endGameTime, "not ended");
+        require(_match.amount >= 0 , "not value");
+        if ( _match.correctAnswer == 0 ) {
+            _match.leverage = team1X;
+        } else if( _match.correctAnswer == 1) {
+            _match.leverage = drawX;
+        } else if( _match.correctAnswer == 2) {
+            _match.leverage = team2X;
+        }
+        
+
 
         for (uint i = 0; i < users.length; i++){
-            require(isCorrect[users[i]] == true , "its not correct");
-            uint amount = Value[users[i]];
-        users[i].transfer(amount);
+            uint amount = ((((Value[users[i]]) * _match.leverage)* 97 ) / 100);
+            if (Answer[users[i]] == _match.correctAnswer) {
+                
+                users[i].transfer(amount);
+                
+            } else { continue;
+            }
+           
         }
-        emit SendRewrd(_matchName_);
     }
 
     function launch(string calldata _name) external onlyOwner{
+       
         uint256 _startAt = block.timestamp;
         uint256 _endAt = block.timestamp + 12 weeks;
         require(_startAt >= block.timestamp, "start at < now");
@@ -132,6 +149,7 @@ contract Bet {
         Answer[msg.sender] = 0;
         Value[msg.sender] += _amount;
         isCorrect[msg.sender] = false;
+        users.push(payable(msg.sender));
 
         emit Deposit(count, msg.sender, _amount, "selected team1");
     }
@@ -153,6 +171,7 @@ contract Bet {
         Answer[msg.sender] = 1;
         Value[msg.sender] += _amount;
         isCorrect[msg.sender] = false;
+        users.push(payable(msg.sender));
         emit Deposit(count, msg.sender, _amount, "selected draw");
     }
     function startBettingOnTeam2() payable external {
@@ -173,6 +192,7 @@ contract Bet {
         Answer[msg.sender] = 2;
         Value[msg.sender] += _amount;
         isCorrect[msg.sender] = false;
+        users.push(payable(msg.sender));
         emit Deposit(count, msg.sender, _amount, "selected team 2");
     }
     function setEndAtRealTime () external onlyOwner{
