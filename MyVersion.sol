@@ -5,6 +5,8 @@
 */
 pragma solidity ^0.8.17;
 
+//af first we need a token as a payment , then we deploy our ERC20 token
+import "./IERC20.sol";
 
 
 contract Bet {
@@ -85,9 +87,9 @@ contract Bet {
         });
         emit Launch(count, msg.sender, _startAt, _endAt);
     }
-    uint public team1X;
-    uint public drawX;
-    uint public team2X;
+    uint internal team1X;
+    uint internal drawX;
+    uint internal team2X;
     // function startBetting(uint _id, uint _amount, uint _answer) external {
     //     Campaign storage campaign = campaigns[_id];
     //     require(block.timestamp >= campaign.startAt, "not started");
@@ -101,13 +103,11 @@ contract Bet {
     //     emit Pledge(_id, msg.sender, _amount, _answer);
     // }
     // function startBettingOnTeam1( uint _amount) external {
-        function showLevegarges () public returns(uint, uint, uint, string memory) {
+        function getLevegarges () public {
             Match storage campaign = campaigns[count];
                 team1X = (campaign.team1pool + campaign.drawpool + campaign.team2pool) / campaign.team1pool;
                 drawX = (campaign.team1pool + campaign.drawpool + campaign.team2pool) / campaign.drawpool;
                 team2X = (campaign.team1pool + campaign.drawpool + campaign.team2pool) / campaign.team2pool;
-
-            return(team1X , drawX, team2X, "note that these numbers may changed, because they depended on demand for choices");
         }
         function startBettingOnTeam1() payable external {
         Match storage campaign = campaigns[count];
@@ -194,6 +194,7 @@ contract Bet {
         Match storage campaign = campaigns[count];
         require(Value[msg.sender] > 0, "you haven't any value in this contract");
         require(Answer[msg.sender] == campaign.correctAnswer, "you are not eligibate!");
+        require(isCorrect[msg.sender] == true);
 
         if ( campaign.correctAnswer == 0 ) {
             leverage = team1X;
@@ -207,6 +208,7 @@ contract Bet {
         uint _fee = amountToLeverage - claimable;
         address _to = payable(msg.sender);
         Value[msg.sender] = 0;
+        isCorrect[msg.sender] = false;
         (bool sent, bytes memory data) = _to.call{value: claimable}("");
         require(sent, "Failed to send Ether");
         campaign.amount -= claimable;
