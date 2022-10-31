@@ -10,7 +10,7 @@ contract MultiSigWallet {
     event Execute(uint indexed txId);
 
     struct Transaction {
-        address to;
+        address To;
         uint value;
         bytes data;
         bool executed;
@@ -60,7 +60,7 @@ contract MultiSigWallet {
 
     function submit(address _to, uint _value, bytes calldata _data)external onlyOwner {
         transactions.push(Transaction({
-            to: _to,
+            To: _to,
             value: _value,
             data: _data,
             executed: false
@@ -91,7 +91,7 @@ contract MultiSigWallet {
         require(_getApprovalCount(_txId) >= required, "approvals < required");
         Transaction storage transaction = transactions [_txId];
         transaction.executed = true;
-        (bool success, ) = transaction.to.call{value: transaction.value}(transaction.data);
+        (bool success, ) = transaction.To.call{value: transaction.value}(transaction.data);
         require(success, "tx failed");
         emit Execute(_txId);
     }
