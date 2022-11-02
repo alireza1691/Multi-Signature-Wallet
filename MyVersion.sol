@@ -10,12 +10,17 @@ contract Bet {
     
 
     // Before each match we can start betting phase that users can bet on own choices
+    // Note that couple minutes before match deposit phase expires untill match finished
     event Launch(
         string matchName,
         address indexed creator,
         uint startAt,
         uint endAt
     );
+
+    // In deposit phase user's choose that they want bet on (team1 win / draw / team2 win)
+    // note that we just bettig on everythings that may happened in 90 minute (extra time and penalty doesn't matter)
+    
     event Deposit(uint indexed id, address indexed caller, uint amount, string betOn);
     event Unpledge(uint indexed id, address indexed caller, uint amount);
     event CancelBeforStart(uint id);
