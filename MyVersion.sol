@@ -184,6 +184,40 @@ contract Bet {
         users.push(payable(msg.sender));
         emit Deposit(count, msg.sender, _amount, "selected team 2");
     }
+
+    function withdrawBeforeBegin(uint amount_) payable external{
+        Match storage _match = Matches[count];
+        require(amount_ <= Value[msg.sender], "more than your balance");
+        require(block.timestamp <= _match.endAt, "now you cannot withdraw");
+        uint team1X;
+        uint drawX;
+        uint team2X;
+        team1X = (_match.team1pool + _match.drawpool + _match.team2pool) / _match.team1pool;
+        drawX = (_match.team1pool + _match.drawpool + _match.team2pool) / _match.drawpool;
+        team2X = (_match.team1pool + _match.drawpool + _match.team2pool) / _match.team2pool;
+        uint depositable;
+          if ( Answer[msg.sender] == 0 ) {
+            depositable = ((Value[msg.sender] * team1X / 3));
+            _match.team1pool -= depositable;
+        } else if( _match.correctAnswer == 1) {
+            depositable = ((Value[msg.sender] * drawX / 3));
+            _match.drawpool -= depositable;
+        } else if( _match.correctAnswer == 2) {
+            depositable = ((Value[msg.sender] * team2X / 3));
+            _match.team2pool -= depositable;
+        }
+        address payable who = payable(msg.sender);
+        Value[msg.sender] -= depositable;
+        _match.amount -= depositable;
+        who.transfer(depositable * 99 / 100);
+        _match.fee += (depositable * 1 / 100);
+
+
+            
+    }
+
+
+
     function setEndAtRealTime () external onlyOwner{
         Match storage _match = Matches[count];
         _match.endAt = block.timestamp;
