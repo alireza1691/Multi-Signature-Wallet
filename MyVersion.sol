@@ -42,6 +42,11 @@ contract Bet {
         uint fee;
         uint leverage;
     }
+    struct User {
+        uint depositOn1;
+        uint depositOnDraw;
+        uint depositOn2;
+    }
     address payable owner;
     uint public count;
 
@@ -52,38 +57,47 @@ contract Bet {
         owner = payable(msg.sender);
     }
    
-
+    mapping(address => User) public Users;
     address payable [] public users;
     mapping(uint => Match) public Matches;
-    // mapping(uint => mapping(address => bool)) public approved;
-    // mapping(uint => mapping(address => uint)) public pledgedAmount;
-    // mapping(uint => mapping(address => uint256)) public UserAnswer;
-    mapping(address => uint) public Answer;
-    mapping(address => uint) public Value;
+    // mapping(address => uint) public Answer;
+    // mapping(address => uint) public Value;
     mapping(address => bool) public isCorrect;
 
     function sendReward () external payable onlyOwner{
         Match storage _match = Matches[count];
+        // User storage _user = Users[];
         require(block.timestamp > _match.endGameTime, "not ended");
         require(_match.amount >= 0 , "not value");
-        if ( _match.correctAnswer == 0 ) {
-            _match.leverage = _match.amount * _match.team1pool;
-        } else if( _match.correctAnswer == 1) {
-            _match.leverage = _match.amount * _match.drawpool;
-        } else if( _match.correctAnswer == 2) {
-            _match.leverage = _match.amount * _match.team2pool;
-        }
-        
+        uint amount_;
 
 
         for (uint i = 0; i < users.length; i++){
-            uint amount = ((((Value[users[i]]) * _match.leverage)* 97 ) / 100);
-            if (Answer[users[i]] == _match.correctAnswer) {
+            User storage _user = Users[];
+
+            if ( _match.correctAnswer == 0 ) {
+                require(_user.depositOn1 > 0);
                 
-                users[i].transfer(amount);
-                
-            } else { continue;
+                Users[i].transfer((User[i].depositOn1) * 97 / 100);
+                Users[i].depositOn1 = 0;
+                Users[i].depositOnDraw = 0;
+                Users[i].depositOn2 = 0;
+            } else if(_match.correctAnswer == 1) {
+                require(Users[i].depositOnDraw > 0);
+
+                Users[i].transfer((User[i].depositOnDraw) * 97 / 100);
+                Users[i].depositOn1 = 0;
+                Users[i].depositOnDraw = 0;
+                Users[i].depositOn2 = 0;
+            } else if (_match.correctAnswer == 2) {
+                require(Users[i].depositOn2 > 0);
+
+                Users[i].transfer((User[i].depositOn2) * 97 / 100);
+                Users[i].depositOn1 = 0;
+                Users[i].depositOnDraw = 0;
+                Users[i].depositOn2 = 0;
             }
+            
            
         }
     }
@@ -127,6 +141,7 @@ contract Bet {
         }
         function startBettingOnTeam1() payable external {
         Match storage _match = Matches[count];
+        User storage _user = Users[msg.sender];
         require(block.timestamp >= _match.startAt, "not started");
         require(block.timestamp <= _match.endAt, "time to bet was over");
         require(msg.value > 0.01 ether, "too smal amount");
@@ -135,15 +150,17 @@ contract Bet {
         _amount = msg.value;
         _match.team1pool += _amount;
         _match.amount += _amount;
-        Answer[msg.sender] = 0;
-        Value[msg.sender] += _amount;
+        // Answer[msg.sender] = 0;
+        // Value[msg.sender] += _amount;
         isCorrect[msg.sender] = false;
         users.push(payable(msg.sender));
+        _user.depositOn1 += _amount;
 
         emit Deposit(count, msg.sender, _amount, "selected team1");
     }
     function startBettingOnDraw() payable external {
-     Match storage _match = Matches[count];
+        Match storage _match = Matches[count];
+        User storage _user = Users[msg.sender];
         require(block.timestamp >= _match.startAt, "not started");
         require(block.timestamp <= _match.endAt, "time to bet was over");
         require(msg.value > 0.01 ether, "too smal amount");
@@ -157,14 +174,16 @@ contract Bet {
 
         _match.drawpool += _amount;
         _match.amount += _amount;
-        Answer[msg.sender] = 1;
-        Value[msg.sender] += _amount;
+        // Answer[msg.sender] = 1;
+        // Value[msg.sender] += _amount;
         isCorrect[msg.sender] = false;
         users.push(payable(msg.sender));
+        _user.depositOnDraw += _amount;
         emit Deposit(count, msg.sender, _amount, "selected draw");
     }
     function startBettingOnTeam2() payable external {
         Match storage _match = Matches[count];
+        User storage _user = Users[msg.sender];
         require(block.timestamp >= _match.startAt, "not started");
         require(block.timestamp <= _match.endAt, "time to bet was over");
         require(msg.value > 0.01 ether, "too smal amount");
@@ -178,17 +197,20 @@ contract Bet {
 
         _match.team2pool += _amount;
         _match.amount += _amount;
-        Answer[msg.sender] = 2;
-        Value[msg.sender] += _amount;
+        // Answer[msg.sender] = 2;
+        // Value[msg.sender] += _amount;
         isCorrect[msg.sender] = false;
         users.push(payable(msg.sender));
+        _user.depositOn2 += _amount;
         emit Deposit(count, msg.sender, _amount, "selected team 2");
     }
 
-    function withdrawBeforeBegin(uint amount_) payable external{
+    function withdrawBeforeBegin(uint amount_, uint key) payable external{
         Match storage _match = Matches[count];
-        require(amount_ <= Value[msg.sender], "more than your balance");
+        User storage _user = Users[msg.sender];
+        require(amount_ <= _user.depositOn1 + _user.depositOnDraw + _user.depositOn2, "more than your balance");
         require(block.timestamp <= _match.endAt, "now you cannot withdraw");
+        require(key == 0 || 1 || 2, "key is not correct");
         uint team1X;
         uint drawX;
         uint team2X;
@@ -196,21 +218,26 @@ contract Bet {
         drawX = (_match.team1pool + _match.drawpool + _match.team2pool) / _match.drawpool;
         team2X = (_match.team1pool + _match.drawpool + _match.team2pool) / _match.team2pool;
         uint depositable;
-          if ( Answer[msg.sender] == 0 ) {
-            depositable = ((Value[msg.sender] * team1X / 3));
+          if ( key == 0 ) {
+            require(_user.depositOn1 >= 0);
+            depositable = ((_user.depositOn1 * team1X / 3));
             _match.team1pool -= depositable;
-        } else if( _match.correctAnswer == 1) {
-            depositable = ((Value[msg.sender] * drawX / 3));
+            _user.depositOn1 -= depositable;
+        } else if( key == 1) {
+            require(_user.depositOnDraw >= 0);
+            depositable = ((_user.depositOnDraw * drawX / 3));
             _match.drawpool -= depositable;
-        } else if( _match.correctAnswer == 2) {
-            depositable = ((Value[msg.sender] * team2X / 3));
+            _user.depositOnDraw -= depositable;
+        } else if( key == 2) {
+            require(_user.depositOn2 >= 0);
+            depositable = ((_user.depositOn2 * team2X / 3));
             _match.team2pool -= depositable;
+            _user.depositOn2 -= depositable;
         }
         address payable who = payable(msg.sender);
-        Value[msg.sender] -= depositable;
         _match.amount -= depositable;
-        who.transfer(depositable * 99 / 100);
-        _match.fee += (depositable * 1 / 100);
+        who.transfer(depositable * 97 / 100);
+        _match.fee += (depositable * 3 / 100);
 
 
             
@@ -223,10 +250,9 @@ contract Bet {
         _match.endAt = block.timestamp;
     }
 
-    function setwinner(uint resultMatch) external {
+    function setwinner(uint resultMatch) external onlyOwner{
         Match storage _match = Matches[count];
-        require(resultMatch < 3, "choise only must be one of the 0 , 1 , 2 numbers!!");
-        require(msg.sender == owner, "just owner can");
+        require(resultMatch == 0 || 1 || 2 , "choise only must be one of the 0 , 1 , 2 numbers!!");
         require(block.timestamp >= _match.endAt, "not ended");
         require(address(this).balance != 0, "does not have any value");
         _match.correctAnswer = resultMatch;
@@ -260,10 +286,9 @@ contract Bet {
     //     _match.fee += _fee;
     //     emit ClaimReward(true, msg.sender, claimable, data);
     // }
-    function claimFee() payable external {
+    function claimThisMatchFee() payable external onlyOwner{
           Match storage _match = Matches[count];
         require(block.timestamp >= _match.endGameTime, "not ended");
-        require(msg.sender == owner, " owner can refund ");
 
         uint claimable = _match.fee;
         (bool sent, bytes memory data) = owner.call{value: claimable}("");
