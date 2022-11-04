@@ -69,33 +69,34 @@ contract Bet {
         // User storage _user = Users[];
         require(block.timestamp > _match.endGameTime, "not ended");
         require(_match.amount >= 0 , "not value");
-        uint amount_;
 
 
         for (uint i = 0; i < users.length; i++){
-            User storage _user = Users[];
 
             if ( _match.correctAnswer == 0 ) {
-                require(_user.depositOn1 > 0);
+                require(Users[users[i]].depositOn1 > 0);
                 
-                Users[i].transfer((User[i].depositOn1) * 97 / 100);
-                Users[i].depositOn1 = 0;
-                Users[i].depositOnDraw = 0;
-                Users[i].depositOn2 = 0;
+                users[i].transfer(((Users[users[i]].depositOn1) * _match.leverage) * 97 / 100);
+                Users[users[i]].depositOn1 = 0;
+                Users[users[i]].depositOnDraw = 0;
+                Users[users[i]].depositOn2 = 0;
+                _match.fee += (((Users[users[i]].depositOn1) * _match.leverage) * 3 / 100);
             } else if(_match.correctAnswer == 1) {
-                require(Users[i].depositOnDraw > 0);
+                require(Users[users[i]].depositOnDraw > 0);
 
-                Users[i].transfer((User[i].depositOnDraw) * 97 / 100);
-                Users[i].depositOn1 = 0;
-                Users[i].depositOnDraw = 0;
-                Users[i].depositOn2 = 0;
+                users[i].transfer(((Users[users[i]].depositOnDraw) * _match.leverage) * 97 / 100);
+                Users[users[i]].depositOn1 = 0;
+                Users[users[i]].depositOnDraw = 0;
+                Users[users[i]].depositOn2 = 0;
+                _match.fee += (((Users[users[i]].depositOn1) * _match.leverage) * 3 / 100);
             } else if (_match.correctAnswer == 2) {
-                require(Users[i].depositOn2 > 0);
+                require(Users[users[i]].depositOn2 > 0);
 
-                Users[i].transfer((User[i].depositOn2) * 97 / 100);
-                Users[i].depositOn1 = 0;
-                Users[i].depositOnDraw = 0;
-                Users[i].depositOn2 = 0;
+                users[i].transfer(((Users[users[i]].depositOn2) * _match.leverage) * 97 / 100);
+                Users[users[i]].depositOn1 = 0;
+                Users[users[i]].depositOnDraw = 0;
+                Users[users[i]].depositOn2 = 0;
+                _match.fee += (((Users[users[i]].depositOn1) * _match.leverage) * 3 / 100);
             }
             
            
@@ -210,7 +211,7 @@ contract Bet {
         User storage _user = Users[msg.sender];
         require(amount_ <= _user.depositOn1 + _user.depositOnDraw + _user.depositOn2, "more than your balance");
         require(block.timestamp <= _match.endAt, "now you cannot withdraw");
-        require(key == 0 || 1 || 2, "key is not correct");
+        require(key < 3, "key is not correct");
         uint team1X;
         uint drawX;
         uint team2X;
@@ -252,7 +253,7 @@ contract Bet {
 
     function setwinner(uint resultMatch) external onlyOwner{
         Match storage _match = Matches[count];
-        require(resultMatch == 0 || 1 || 2 , "choise only must be one of the 0 , 1 , 2 numbers!!");
+        require(resultMatch < 3 , "choise only must be one of the 0 , 1 , 2 numbers!!");
         require(block.timestamp >= _match.endAt, "not ended");
         require(address(this).balance != 0, "does not have any value");
         _match.correctAnswer = resultMatch;
