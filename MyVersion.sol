@@ -64,44 +64,8 @@ contract Bet {
     // mapping(address => uint) public Value;
     mapping(address => bool) public isCorrect;
 
-    function sendReward () external payable onlyOwner{
-        Match storage _match = Matches[count];
-        // User storage _user = Users[];
-        require(block.timestamp > _match.endGameTime, "not ended");
-        require(_match.amount >= 0 , "not value");
-
-
-        for (uint i = 0; i < users.length; i++){
-
-            if ( _match.correctAnswer == 0 ) {
-                require(Users[users[i]].depositOn1 > 0);
-                
-                users[i].transfer(((Users[users[i]].depositOn1) * _match.leverage) * 97 / 100);
-                Users[users[i]].depositOn1 = 0;
-                Users[users[i]].depositOnDraw = 0;
-                Users[users[i]].depositOn2 = 0;
-                _match.fee += (((Users[users[i]].depositOn1) * _match.leverage) * 3 / 100);
-            } else if(_match.correctAnswer == 1) {
-                require(Users[users[i]].depositOnDraw > 0);
-
-                users[i].transfer(((Users[users[i]].depositOnDraw) * _match.leverage) * 97 / 100);
-                Users[users[i]].depositOn1 = 0;
-                Users[users[i]].depositOnDraw = 0;
-                Users[users[i]].depositOn2 = 0;
-                _match.fee += (((Users[users[i]].depositOn1) * _match.leverage) * 3 / 100);
-            } else if (_match.correctAnswer == 2) {
-                require(Users[users[i]].depositOn2 > 0);
-
-                users[i].transfer(((Users[users[i]].depositOn2) * _match.leverage) * 97 / 100);
-                Users[users[i]].depositOn1 = 0;
-                Users[users[i]].depositOnDraw = 0;
-                Users[users[i]].depositOn2 = 0;
-                _match.fee += (((Users[users[i]].depositOn1) * _match.leverage) * 3 / 100);
-            }
-            
-           
-        }
-    }
+    
+    
 
     function launch(string calldata _name) external onlyOwner{
        
@@ -262,31 +226,45 @@ contract Bet {
         emit InputWinner(true);
     }
 
-    // function CheckAndGetReward() payable external {
-    //     Match storage _match = Matches[count];
-    //     require(Value[msg.sender] > 0, "you haven't any value in this contract");
-    //     require(Answer[msg.sender] == _match.correctAnswer, "you are not eligibate!");
-    //     require(isCorrect[msg.sender] == true);
+    function sendReward () external payable onlyOwner{
+        Match storage _match = Matches[count];
+        // User storage _user = Users[];
+        require(block.timestamp > _match.endGameTime, "not ended");
+        require(_match.amount >= 0 , "not value");
 
-    //     if ( _match.correctAnswer == 0 ) {
-    //         _match.leverage = team1X;
-    //     } else if( _match.correctAnswer == 1) {
-    //         _match.leverage = drawX;
-    //     } else if( _match.correctAnswer == 2) {
-    //         _match.leverage = team2X;
-    //     }
-    //     uint amountToLeverage = (Value[msg.sender] * _match.leverage);
-    //     uint claimable = (((amountToLeverage) * 97 ) / 100);
-    //     uint _fee = amountToLeverage - claimable;
-    //     address _to = payable(msg.sender);
-    //     Value[msg.sender] = 0;
-    //     isCorrect[msg.sender] = false;
-    //     (bool sent, bytes memory data) = _to.call{value: claimable}("");
-    //     require(sent, "Failed to send Ether");
-    //     _match.amount -= claimable;
-    //     _match.fee += _fee;
-    //     emit ClaimReward(true, msg.sender, claimable, data);
-    // }
+
+        for (uint i = 0; i < users.length; i++){
+
+            if ( _match.correctAnswer == 0 ) {
+                require(Users[users[i]].depositOn1 > 0);
+                
+                users[i].transfer(((Users[users[i]].depositOn1) * _match.leverage) * 97 / 100);
+                Users[users[i]].depositOn1 = 0;
+                Users[users[i]].depositOnDraw = 0;
+                Users[users[i]].depositOn2 = 0;
+                _match.fee += (((Users[users[i]].depositOn1) * _match.leverage) * 3 / 100);
+            } else if(_match.correctAnswer == 1) {
+                require(Users[users[i]].depositOnDraw > 0);
+
+                users[i].transfer(((Users[users[i]].depositOnDraw) * _match.leverage) * 97 / 100);
+                Users[users[i]].depositOn1 = 0;
+                Users[users[i]].depositOnDraw = 0;
+                Users[users[i]].depositOn2 = 0;
+                _match.fee += (((Users[users[i]].depositOn1) * _match.leverage) * 3 / 100);
+            } else if (_match.correctAnswer == 2) {
+                require(Users[users[i]].depositOn2 > 0);
+
+                users[i].transfer(((Users[users[i]].depositOn2) * _match.leverage) * 97 / 100);
+                Users[users[i]].depositOn1 = 0;
+                Users[users[i]].depositOnDraw = 0;
+                Users[users[i]].depositOn2 = 0;
+                _match.fee += (((Users[users[i]].depositOn1) * _match.leverage) * 3 / 100);
+            }
+            
+           
+        }
+
+    }
     function claimThisMatchFee() payable external onlyOwner{
           Match storage _match = Matches[count];
         require(block.timestamp >= _match.endGameTime, "not ended");
@@ -308,18 +286,7 @@ contract Bet {
         require(sent, "Failed to send Ether");
 
     }
-    // function claimLoserFunds(uint _id) external {
-    //     Campaign storage campaign = campaigns[_id];
-    //     require(msg.sender == campaign.creator, "not creator");
-    //     // require(block.timestamp >= campaign.endAt, "not ended");
-    //     // require(campaign.pledged >= campaign.goal, "pledged < goal");
-    //     require(!campaign.claimed, "already claimed");
-
-    //     campaign.claimed = true;
-    //     token.transfer(msg.sender, campaign.pledged);
-
-    //     emit Claim(_id);
-    // }
+    
 
     modifier onlyOwner() {
         require(msg.sender == owner);
