@@ -296,39 +296,6 @@ contract Bet {
         uint team2X = (_match.team1pool + _match.drawpool + _match.team2pool) / _match.team2pool;
 
 
-        // for (uint i = 0; i < users.length; i++){
-
-        //     if ( _match.correctAnswer == 0 ) {
-        //         require(Users[users[i]].depositOn1 > 0);
-
-        //         amount = Users[users[i]].depositOn1 * team1X;
-                
-        //         users[i].transfer(((Users[users[i]].depositOn1) * team1X) * 97 / 100);
-        //         Users[users[i]].depositOn1 = 0;
-        //         Users[users[i]].depositOnDraw = 0;
-        //         Users[users[i]].depositOn2 = 0;
-        //         _match.fee += (((Users[users[i]].depositOn1) * team1X) * 3 / 100);
-        //         _match.drawpool -= Users[users[i]].depositOn1;
-        //         _match.team1pool -= Users[users[i]].depositOnDraw;
-        //         _match.team2pool -= Users[users[i]].depositOn2;
-
-        //     } else if(_match.correctAnswer == 1) {
-        //         require(Users[users[i]].depositOnDraw > 0);
-
-        //         users[i].transfer(((Users[users[i]].depositOnDraw) * drawX) * 97 / 100);
-        //         Users[users[i]].depositOn1 = 0;
-        //         Users[users[i]].depositOnDraw = 0;
-        //         Users[users[i]].depositOn2 = 0;
-        //         _match.fee += (((Users[users[i]].depositOn1) * drawX) * 3 / 100);
-        //     } else if (_match.correctAnswer == 2) {
-        //         require(Users[users[i]].depositOn2 > 0);
-
-        //         users[i].transfer(((Users[users[i]].depositOn2) * team2X) * 97 / 100);
-        //         Users[users[i]].depositOn1 = 0;
-        //         Users[users[i]].depositOnDraw = 0;
-        //         Users[users[i]].depositOn2 = 0;
-        //         _match.fee += (((Users[users[i]].depositOn1) * team2X) * 3 / 100);
-        //     }
             for (uint i = 0; i < users.length; i++){
             
             
@@ -353,41 +320,6 @@ contract Bet {
         }
             
            
-        // }
-        // for (uint i = 0; i < users.length; i++){
-
-        //     if ( _match.correctAnswer == 0 ) {
-        //         require(Users[users[i]].depositOn1 > 0);
-                
-        //         users[i].transfer(((Users[users[i]].depositOn1) * _match.leverage) * 97 / 100);
-        //         Users[users[i]].depositOn1 = 0;
-        //         Users[users[i]].depositOnDraw = 0;
-        //         Users[users[i]].depositOn2 = 0;
-        //         _match.fee += (((Users[users[i]].depositOn1) * _match.leverage) * 3 / 100);
-        //         _match.drawpool -= Users[users[i]].depositOn1;
-        //         _match.team1pool -= Users[users[i]].depositOnDraw;
-        //         _match.team2pool -= Users[users[i]].depositOn2;
-
-        //     } else if(_match.correctAnswer == 1) {
-        //         require(Users[users[i]].depositOnDraw > 0);
-
-        //         users[i].transfer(((Users[users[i]].depositOnDraw) * _match.leverage) * 97 / 100);
-        //         Users[users[i]].depositOn1 = 0;
-        //         Users[users[i]].depositOnDraw = 0;
-        //         Users[users[i]].depositOn2 = 0;
-        //         _match.fee += (((Users[users[i]].depositOn1) * _match.leverage) * 3 / 100);
-        //     } else if (_match.correctAnswer == 2) {
-        //         require(Users[users[i]].depositOn2 > 0);
-
-        //         users[i].transfer(((Users[users[i]].depositOn2) * _match.leverage) * 97 / 100);
-        //         Users[users[i]].depositOn1 = 0;
-        //         Users[users[i]].depositOnDraw = 0;
-        //         Users[users[i]].depositOn2 = 0;
-        //         _match.fee += (((Users[users[i]].depositOn1) * _match.leverage) * 3 / 100);
-        //     }
-            
-           
-        // }
 
     }
     function claimThisMatchFee() payable external onlyOwner{
