@@ -121,7 +121,7 @@ contract Bet {
         require(block.timestamp >= _match.startBetAt, "not started"); 
         require(block.timestamp <= _match.endBetAt, "time to bet was over");
         require(msg.value > 0.01 ether, "too smal amount");
-        require(msg.value > msg.sender.balance, "bigger than your balance");
+        require(msg.value < msg.sender.balance, "bigger than your balance");
 
         uint _amount = msg.value;
         _match.team1pool += _amount;
@@ -139,7 +139,7 @@ contract Bet {
         require(block.timestamp >= _match.startBetAt, "not started");
         require(block.timestamp <= _match.endBetAt, "time to bet was over");
         require(msg.value > 0.01 ether, "too smal amount");
-        require(msg.value > msg.sender.balance, "bigger than your balance");
+        require(msg.value < msg.sender.balance, "bigger than your balance");
 
         uint _amount = msg.value;
         _match.drawpool += _amount;
@@ -157,7 +157,7 @@ contract Bet {
         require(block.timestamp >= _match.startBetAt, "not started");
         require(block.timestamp <= _match.endBetAt, "time to bet was over");
         require(msg.value > 0.01 ether, "too smal amount");
-        require(msg.value > msg.sender.balance, "bigger than your balance");
+        require(msg.value < msg.sender.balance, "bigger than your balance");
 
         uint _amount = msg.value;
  
@@ -169,6 +169,14 @@ contract Bet {
         emit Deposit(msg.sender, _amount, "selected team 2");
     }
 
+    function getUserBalance() public view returns(uint, uint){
+        User storage _user = Users[msg.sender];
+        Match storage _match = Matches[countMatches];
+        uint amount = _user.depositOn1;
+        uint team1X = (_match.team1pool  * 3) / (_match.team1pool + _match.drawpool + _match.team2pool);
+        
+        return(amount, team1X);
+    }
     // By this function user can withdaw amount in each pool that deposited before
     // Note that withdrawble amount maybe not eqal with deposited amout
     // Because it depended on each pool value, for exaple if you deposited 
@@ -177,18 +185,17 @@ contract Bet {
         User storage _user = Users[msg.sender];
         require(_user.depositOn1 >= 0, "not enough balance");
         require(block.timestamp <= _match.endBetAt, "now you cannot withdraw"); 
-
-        uint team1X = (_match.team1pool - amount_) /((_match.team1pool - amount_)+ _match.drawpool + _match.team2pool) * 3;
-        uint withdrawable =((_user.depositOn1 * team1X));
-        
-        require(amount_ < withdrawable, "bigger than your balance");
-        _match.team1pool -= withdrawable;
-        _user.depositOn1 -= withdrawable;
+        uint decimals = 10 ** 18;
+        uint team1X = (_match.team1pool * 3) /(_match.team1pool + _match.drawpool + _match.team2pool);
+        uint PercentPool = (amount_ * decimals)/ (_match.team1pool * 2);   
+        require((amount_ * decimals ) < ((_user.depositOn1 * team1X ) - PercentPool), "bigger than your balance");
+        _match.team1pool -= amount_ * decimals;
+        _user.depositOn1 -= amount_ * decimals;
 
         address payable who = payable(msg.sender);
-        _match.value -= amount_;
-        who.transfer(amount_ * 97 / 100);
-        _match.fee += (withdrawable * 3 / 100);
+        _match.value -= amount_ * decimals;
+        who.transfer(((amount_ * decimals) * 97 / 100) - PercentPool);
+        _match.fee += (amount_ * 3 / 100);
 
         emit Withdraw(msg.sender, amount_, "withdrawed from team 1 pool");
 
@@ -225,8 +232,9 @@ contract Bet {
         uint team2X = ((_match.team2pool - amount_) /(_match.team1pool + _match.drawpool + (_match.team2pool - amount_)) * 3 );
         uint withdrawable = ((_user.depositOn2 * team2X));
         require(_user.depositOn2 >= 0);
-        require(amount_ < withdrawable, "bigger than your balance");
         withdrawable = ((_user.depositOn2 * team2X));
+        require(amount_ < withdrawable, "bigger than your balance");
+        
         _match.team2pool -= withdrawable;
         _user.depositOn2 -= withdrawable;
 
@@ -282,42 +290,104 @@ contract Bet {
         // User storage _user = Users[];
         require(block.timestamp > _match.endMatchTime, "not ended");
         require(_match.value >= 0 , "not value");
+        uint amount;
+        uint team1X = (_match.team1pool + _match.drawpool + _match.team2pool) / _match.team1pool;
+        uint drawX = (_match.team1pool + _match.drawpool + _match.team2pool) / _match.drawpool;
+        uint team2X = (_match.team1pool + _match.drawpool + _match.team2pool) / _match.team2pool;
 
 
-        for (uint i = 0; i < users.length; i++){
+        // for (uint i = 0; i < users.length; i++){
 
-            if ( _match.correctAnswer == 0 ) {
-                require(Users[users[i]].depositOn1 > 0);
+        //     if ( _match.correctAnswer == 0 ) {
+        //         require(Users[users[i]].depositOn1 > 0);
+
+        //         amount = Users[users[i]].depositOn1 * team1X;
                 
-                users[i].transfer(((Users[users[i]].depositOn1) * _match.leverage) * 97 / 100);
-                Users[users[i]].depositOn1 = 0;
-                Users[users[i]].depositOnDraw = 0;
-                Users[users[i]].depositOn2 = 0;
-                _match.fee += (((Users[users[i]].depositOn1) * _match.leverage) * 3 / 100);
-                _match.drawpool -= Users[users[i]].depositOn1;
-                _match.team1pool -= Users[users[i]].depositOnDraw;
-                _match.team2pool -= Users[users[i]].depositOn2;
+        //         users[i].transfer(((Users[users[i]].depositOn1) * team1X) * 97 / 100);
+        //         Users[users[i]].depositOn1 = 0;
+        //         Users[users[i]].depositOnDraw = 0;
+        //         Users[users[i]].depositOn2 = 0;
+        //         _match.fee += (((Users[users[i]].depositOn1) * team1X) * 3 / 100);
+        //         _match.drawpool -= Users[users[i]].depositOn1;
+        //         _match.team1pool -= Users[users[i]].depositOnDraw;
+        //         _match.team2pool -= Users[users[i]].depositOn2;
 
-            } else if(_match.correctAnswer == 1) {
-                require(Users[users[i]].depositOnDraw > 0);
+        //     } else if(_match.correctAnswer == 1) {
+        //         require(Users[users[i]].depositOnDraw > 0);
 
-                users[i].transfer(((Users[users[i]].depositOnDraw) * _match.leverage) * 97 / 100);
-                Users[users[i]].depositOn1 = 0;
-                Users[users[i]].depositOnDraw = 0;
-                Users[users[i]].depositOn2 = 0;
-                _match.fee += (((Users[users[i]].depositOn1) * _match.leverage) * 3 / 100);
-            } else if (_match.correctAnswer == 2) {
-                require(Users[users[i]].depositOn2 > 0);
+        //         users[i].transfer(((Users[users[i]].depositOnDraw) * drawX) * 97 / 100);
+        //         Users[users[i]].depositOn1 = 0;
+        //         Users[users[i]].depositOnDraw = 0;
+        //         Users[users[i]].depositOn2 = 0;
+        //         _match.fee += (((Users[users[i]].depositOn1) * drawX) * 3 / 100);
+        //     } else if (_match.correctAnswer == 2) {
+        //         require(Users[users[i]].depositOn2 > 0);
 
-                users[i].transfer(((Users[users[i]].depositOn2) * _match.leverage) * 97 / 100);
-                Users[users[i]].depositOn1 = 0;
-                Users[users[i]].depositOnDraw = 0;
-                Users[users[i]].depositOn2 = 0;
-                _match.fee += (((Users[users[i]].depositOn1) * _match.leverage) * 3 / 100);
-            }
+        //         users[i].transfer(((Users[users[i]].depositOn2) * team2X) * 97 / 100);
+        //         Users[users[i]].depositOn1 = 0;
+        //         Users[users[i]].depositOnDraw = 0;
+        //         Users[users[i]].depositOn2 = 0;
+        //         _match.fee += (((Users[users[i]].depositOn1) * team2X) * 3 / 100);
+        //     }
+            for (uint i = 0; i < users.length; i++){
             
+            
+            if (_match.correctAnswer == 0) {
+                // require(Users[users[i]].depositOn1 > 0, "not value");
+                amount = Users[users[i]].depositOn1 * team1X ;
+                users[i].transfer(amount * 97 / 100);
+                
+            } else if ( _match.correctAnswer == 1) {
+                // require(Users[users[i]].depositOnDraw > 0, "not value");
+                users[i].transfer(amount);
+                amount = Users[users[i]].depositOnDraw * drawX ;
+                users[i].transfer(amount * 97 / 100);
+
+            } else if ( _match.correctAnswer ==2) {
+                // require(Users[users[i]].depositOn2 > 0, "not value");
+                users[i].transfer(amount);
+                amount = Users[users[i]].depositOn2 * team2X ;
+                users[i].transfer(amount * 97 / 100);
+            }
            
         }
+            
+           
+        // }
+        // for (uint i = 0; i < users.length; i++){
+
+        //     if ( _match.correctAnswer == 0 ) {
+        //         require(Users[users[i]].depositOn1 > 0);
+                
+        //         users[i].transfer(((Users[users[i]].depositOn1) * _match.leverage) * 97 / 100);
+        //         Users[users[i]].depositOn1 = 0;
+        //         Users[users[i]].depositOnDraw = 0;
+        //         Users[users[i]].depositOn2 = 0;
+        //         _match.fee += (((Users[users[i]].depositOn1) * _match.leverage) * 3 / 100);
+        //         _match.drawpool -= Users[users[i]].depositOn1;
+        //         _match.team1pool -= Users[users[i]].depositOnDraw;
+        //         _match.team2pool -= Users[users[i]].depositOn2;
+
+        //     } else if(_match.correctAnswer == 1) {
+        //         require(Users[users[i]].depositOnDraw > 0);
+
+        //         users[i].transfer(((Users[users[i]].depositOnDraw) * _match.leverage) * 97 / 100);
+        //         Users[users[i]].depositOn1 = 0;
+        //         Users[users[i]].depositOnDraw = 0;
+        //         Users[users[i]].depositOn2 = 0;
+        //         _match.fee += (((Users[users[i]].depositOn1) * _match.leverage) * 3 / 100);
+        //     } else if (_match.correctAnswer == 2) {
+        //         require(Users[users[i]].depositOn2 > 0);
+
+        //         users[i].transfer(((Users[users[i]].depositOn2) * _match.leverage) * 97 / 100);
+        //         Users[users[i]].depositOn1 = 0;
+        //         Users[users[i]].depositOnDraw = 0;
+        //         Users[users[i]].depositOn2 = 0;
+        //         _match.fee += (((Users[users[i]].depositOn1) * _match.leverage) * 3 / 100);
+        //     }
+            
+           
+        // }
 
     }
     function claimThisMatchFee() payable external onlyOwner{
