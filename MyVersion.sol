@@ -116,10 +116,11 @@ contract Bet {
             _match.team1pool = team1;
             _match.drawpool = draw;
             _match.team2pool = team2;
-            _match.leverage1 = (_match.team1pool + _match.team2pool + _match.drawpool) / _match.team1pool;
-            _match.leverageDraw = (_match.team1pool + _match.team2pool + _match.drawpool) / _match.drawpool;
-            _match.leverage2 = (_match.team1pool + _match.team2pool + _match.drawpool) / _match.team2pool;
-        }
+            _match.leverage1 = (team1 + draw + team2) / team1;
+            _match.leverageDraw = (team1 + draw + team2) / draw;
+            _match.leverage2 = (team1 + draw + team2) / team2;
+        }    
+
 
         // By this function user only can deposit on team 1
         function BetOn1() payable external {
@@ -136,6 +137,8 @@ contract Bet {
         users.push(payable(msg.sender));
         _user.depositOn1 += _amount;
         _match.fee += msg.value * 3 / 100;
+
+        SetNewLeverages(_match.team1pool, _match.drawpool, _match.team2pool);
 
         // Update leverages:
         // _match.leverage1 = (_match.team1pool + _match.team2pool + _match.drawpool) / _match.team1pool;
