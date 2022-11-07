@@ -111,12 +111,19 @@ contract Bet {
             Match storage _match = Matches[countMatches];
             return(_match.leverage1, _match.leverageDraw, _match.leverage2);    
         }
-        function SetNewLeverages(uint team1, uint draw, uint team2) private {
+        // function SetNewLeverages(uint team1, uint draw, uint team2) private {
+        //     Match storage _match = Matches[countMatches];
+        //     _match.leverage1 = (team1 + draw + team2) / team1;
+        //     _match.leverageDraw = (team1 + draw + team2) / draw;
+        //     _match.leverage2 = (team1 + draw + team2) / team2;
+        // }    
+         function SetNewLeverages(uint team1, uint draw, uint team2) private {
+            
             Match storage _match = Matches[countMatches];
             _match.leverage1 = (team1 + draw + team2) / team1;
             _match.leverageDraw = (team1 + draw + team2) / draw;
             _match.leverage2 = (team1 + draw + team2) / team2;
-        }    
+        }  
 
 
         // By this function user only can deposit on team 1
