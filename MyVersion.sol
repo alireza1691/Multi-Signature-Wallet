@@ -135,15 +135,11 @@ contract Bet {
         _user.depositOn1 += _amount;
         _match.fee += msg.value * 3 / 100;
 
-        SetNewLeverages(_match.team1pool, _match.drawpool, _match.team2pool);
+        // SetNewLeverages(_match.team1pool, _match.drawpool, _match.team2pool);
 
-        // Update leverages:
-        // _match.leverage1 = (_match.team1pool + _match.team2pool + _match.drawpool) / _match.team1pool;
-        // _match.leverageDraw = (_match.team1pool + _match.team2pool + _match.drawpool) / _match.drawpool;
-        // _match.leverage2 = (_match.team1pool + _match.team2pool + _match.drawpool) / _match.team2pool;
+       
         
-        
-        emit Deposit(msg.sender, _amount, "Deposited in team1 pool");
+        emit Deposit(msg.sender, _amount, "Deposited on team1");
 
         
     }
@@ -165,11 +161,10 @@ contract Bet {
         _user.depositOnDraw += _amount;
         _match.fee += msg.value * 3 / 100;
 
-        // Update leverages:
-        // _match.leverage1 = (_match.team1pool + _match.team2pool + _match.drawpool) / _match.team1pool;
-        // _match.leverageDraw = (_match.team1pool + _match.team2pool + _match.drawpool) / _match.drawpool;
-        // _match.leverage2 = (_match.team1pool + _match.team2pool + _match.drawpool) / _match.team2pool;
-        emit Deposit(msg.sender, _amount, "Deposited draw pool");
+        // SetNewLeverages(_match.team1pool, _match.drawpool, _match.team2pool);
+
+
+        emit Deposit(msg.sender, _amount, "Deposited on draw");
     }
 
     // By this function user only can deposit on team 2
@@ -187,12 +182,10 @@ contract Bet {
         users.push(payable(msg.sender));
         _user.depositOn2 += _amount;
         _match.fee += msg.value * 3 / 100;
+        // SetNewLeverages(_match.team1pool, _match.drawpool, _match.team2pool);
 
-        // Update leverages:
-        // _match.leverage1 = (_match.team1pool + _match.team2pool + _match.drawpool) / _match.team1pool;
-        // _match.leverageDraw = (_match.team1pool + _match.team2pool + _match.drawpool) / _match.drawpool;
-        // _match.leverage2 = (_match.team1pool + _match.team2pool + _match.drawpool) / _match.team2pool;
-        emit Deposit(msg.sender, _amount, "selected team 2");
+
+        emit Deposit(msg.sender, _amount, "Deposit on team 2");
     }
 
     
