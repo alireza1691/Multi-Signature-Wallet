@@ -37,64 +37,45 @@ contract Bet {
     event SendRewrd(string indexed matchName);
 
     // This function called by owner and by this function claim fees 
-    event ClaimFee(uint indexed id, address indexed caller, uint amount, bytes indexed _data);
+    event ClaimFee(address indexed caller, uint amount, bytes indexed _data);
 
     // These are every thing about a match that we need
 
-    // struct Match {           // Name of game
-    //     uint value;               // All of amounted that deposited in contract (team1pool + team2pool + drawpool)
-    //     uint256 startBetAt;               // After this time user can deposit
-    //     uint256 endBetAt;               // After this time user can't deposit. this time set by owner couple minutes before start match
-    //     uint correctAnswer;               // Correct answer must be one of 0,1,2 i'll explain it when we set this amount
-    //     uint256 endMatchTime;               // When match finished and we know which one(0,1,2) happened
-    //     uint team1pool;               // Shows how many value deposited on "team 1 win"
-    //     uint drawpool;               // Shows how many value deposited on "draw"
-    //     uint team2pool;               // Shows how many value deposited on "team 2 win"
-    //     uint fee;               // fee of deposit,withdraw and send reward transactions that belongs to contract onwer
-    //     uint leverage1 ;           // Calculate leverage for winners 
-    //     uint leverageDraw;
-    //     uint leverage2;
-    // }
-
-    // Each user can deposit on each case and also withdraw , these are shows how manu value deposited on each pool
+    // Each user can deposit on each pool and also withdraw (each pool belongs to each case that users can bet), these are shows how manu value deposited on each pool by each user
     struct User {
         uint depositOn1;
         uint depositOn2;
         uint depositOn3;
     }
     address payable owner;
-    uint public countMatches;               // After each match we create new structure for new match and this amoun counted matches
-    
 
-    uint private value;
-    uint private num1pool;
-    uint private num2pool;
-    uint private num3pool;
-    uint private lev1 ;
-    uint private lev2 ;
+
+    uint private value;  // How many value deposited in contract
+    uint private num1pool;  // These three ones shows that how many value deposited on each pool
+    uint private num2pool;  // Note that "num1pool + num2pool + num3pool = value
+    uint private num3pool;  // Each pool belongs to one case for betting
+    uint private lev1 ;  // This variable "lev"(symbol of leverage) shows if one user deposited on pool1 and after that pool1 users wins,
+    uint private lev2 ;  // User amount multiply to this amount, then send to user
     uint private lev3 ;
-    uint private startPeriodAt;
-    uint private endPeriodAt;
-    uint private resultShownAt;
-    uint private fee = 1;
-    uint private answer;
-    uint private sendRewardTime;
+    uint private startPeriodAt;  // User can deposit in pools after this time
+    uint private endPeriodAt;   // After this time users can't deposit anymore untill result known 
+    uint private resultShownAt;  // When result of match was determined and owner can send reward of winners
+    uint private fee = 1;   // Fee for transaction that belongs to contract and can changed by owner between limited range
+    uint private answer;   // Result determined by this amount in a function, each number of 1, 2 ,3 shows which pool deositers win
+    uint private sendRewardTime;  // When owner send winners reward, this time sets and after that owner can claim fees
+                                    // If owner does not send users reward, owner can't claim fees
 
-    // If you want to use special token for paymant, you can add address of token this way:
-    // IERC20 public immutable token;
-    // constructor (address _token) {
     constructor () {
         owner = payable(msg.sender);
     }
    
     mapping(address => User) public Users;               // This mapping uses for finding user values on each pool
     address payable [] public users;               // User's pushed in array as a 'payable' address , because after match we want to send reward to winners
-    // mapping(uint => Match) public Matches;               // This mapping uses for each match , count matches gonna use for this mapping
-
-    
-    
-
+ 
+    // Afer launch by owner users can bet or deposit on pools
     function launch() external payable onlyOwner{
+
+        // At first owner must deposit at least 0.3 eth that pools and lev, sets
 
         require( msg.value > 0.3 ether, "at least 0.3 eth deposit 0.3 eth by owner");
         startPeriodAt = block.timestamp;
@@ -332,7 +313,7 @@ contract Bet {
         (bool sent, bytes memory data) = address(msg.sender).call{value: address(this).balance}("");
         require(sent, "Failed to send Ether");
 
-        emit ClaimFee(countMatches, msg.sender, msg.value, data);
+        emit ClaimFee( msg.sender, msg.value, data);
     }
 
     
