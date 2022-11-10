@@ -66,13 +66,13 @@ contract Bet {
     uint public countMatches;               // After each match we create new structure for new match and this amoun counted matches
     
 
-    uint private value = num1pool + num2pool +num3pool;
+    uint private value;
     uint private num1pool;
     uint private num2pool;
     uint private num3pool;
-    uint private lev1 = value / num1pool;
-    uint private lev2 = value / num2pool;
-    uint private lev3 = value / num3pool;
+    uint private lev1 ;
+    uint private lev2 ;
+    uint private lev3 ;
     uint private startPeriodAt;
     uint private endPeriodAt;
     uint private resultShownAt;
@@ -106,60 +106,45 @@ contract Bet {
         num1pool += eachPool;
         num2pool += eachPool;
         num3pool += eachPool;
+        updateVariables(num1pool, num2pool, num3pool);
         
-       
-        // // When match launched by owner , users can bet
-        // uint256 _startAt = block.timestamp;
-        // // Default macth betting period expires 12 weeks after launch, but this time changed by owner couple minutes before match begins
-        // uint256 _endAt = block.timestamp + 12 weeks;
-        // // Every time a new match begins, counted this match for Match array that details can input in own Macth array
-        // countMatches += 1;
-        // Matches [countMatches] = Match ({
-        //     value: 0, // When match just started, value is equal zero
-        //     startBetAt: _startAt,
-        //     endBetAt: _endAt,
-        //     correctAnswer: 9, // That's just a numer , this number later changed and show result of match
-        //     // If this number changed to '0' means that team 1 wins the match, if changed to '1' means draw and for '2' means that team winned match
-        //     endMatchTime: _endAt + 180 minutes, // As a default an footbal match takes 90 minutes , but because of half time and extra time it takes more than 90 minutes
-        //     // Then we set 180 minutes as a default , but when owner set match result , this time changed
-        //     team1pool : 0, // Each pool shows that how many value (as a default ETH) deposited in contract for any case  
-        //     drawpool: 0 , // This number uses for calculate reward of winners and also show leverage before Deposit
-        //     team2pool: 0, // Note that after any new deposit one of these numbers changed and it can changes leverage
-        //     fee: 0, 
-        //     leverage1: 3,// Leverage as a default equal to 1 , but deposits change this number and finaly reward of winners: deposit amount of every winner * leverage 
-        //     leverageDraw: 3,
-        //     leverage2: 3
         
         emit Launch( startPeriodAt);
     }
         // This function shows leverage of any case(team1win / draw / team2win) that user can look at them before deposit
    
-    function getLevegarges () view public returns(uint, uint, uint){
-        return(lev1, lev2, lev3);    
+    function getDetails () view public returns(uint, uint, uint, uint, uint, uint, uint){
+        return(lev1, lev2, lev3, num1pool, num2pool, num3pool, value);    
     }
     function setFee (uint newFee) external onlyOwner {
         require(newFee < 15 && newFee >= 0 ,"fee must be between 0.85 and 0.99");
         fee = newFee;
     }
+    function updateVariables (uint _pool1, uint _pool2, uint _pool3) internal {
+        value = _pool1 + _pool2 + _pool3;
+        lev1 = value / _pool1;
+        lev2 = value / _pool2;
+        lev3 = value / _pool3;
+
+    }
          
 
 
         // By this function user only can deposit on team 1
-    function BetOn1() payable external {
-        User storage _user = Users[msg.sender];         
+    function BetOn1() payable external {        
         require(block.timestamp >= startPeriodAt, "not started"); 
         require(block.timestamp <= endPeriodAt, "time to bet was over");
         require(msg.value > 0.01 ether, "too smal amount");
         require(msg.value < msg.sender.balance, "bigger than your balance");
+        users.push(payable(msg.sender));
+        User storage _user = Users[msg.sender];
 
         uint _amount = msg.value ;
         num1pool += _amount;
         
-        
-        users.push(payable(msg.sender));
         _user.depositOn1 += _amount * (100 - fee) / 100;
-
-
+        
+        updateVariables(num1pool, num2pool, num3pool);
         
         
         emit Deposit(msg.sender, _amount, "Deposited on pool1");
@@ -169,35 +154,38 @@ contract Bet {
 
 
     // By this function user only can deposit on Draw
-    function BetOn2() payable external {
-        User storage _user = Users[msg.sender];         
+    function BetOn2() payable external { 
         require(block.timestamp >= startPeriodAt, "not started"); 
         require(block.timestamp <= endPeriodAt, "time to bet was over");
         require(msg.value > 0.01 ether, "too smal amount");
         require(msg.value < msg.sender.balance, "bigger than your balance");
+        users.push(payable(msg.sender));
+        User storage _user = Users[msg.sender]; 
 
         uint _amount = msg.value ;
         num2pool += _amount;
         
-        users.push(payable(msg.sender));
+        
         _user.depositOn2 += _amount * (100 - fee) / 100;
+        updateVariables(num1pool, num2pool, num3pool);
         
         emit Deposit(msg.sender, _amount, "Deposited on pool2");
     }
 
     // By this function user only can deposit on team 2
-    function BetOn3() payable external {
-        User storage _user = Users[msg.sender];         
+    function BetOn3() payable external {        
         require(block.timestamp >= startPeriodAt, "not started"); 
         require(block.timestamp <= endPeriodAt, "time to bet was over");
         require(msg.value > 0.01 ether, "too smal amount");
         require(msg.value < msg.sender.balance, "bigger than your balance");
+        users.push(payable(msg.sender));
+        User storage _user = Users[msg.sender]; 
 
         uint _amount = msg.value ;
         num3pool += _amount;
         
-        users.push(payable(msg.sender));
         _user.depositOn3 += _amount * (100 - fee) / 100;
+        updateVariables(num1pool, num2pool, num3pool);
 
         emit Deposit(msg.sender, _amount, "Deposit on pool3");
     }
@@ -212,12 +200,14 @@ contract Bet {
         require(block.timestamp < endPeriodAt, "now you cannot withdraw"); 
         uint amountInEth = amount_ * 10 ** 18;
         uint PercentPool = amountInEth/ (num1pool * 2);   
-        require((amountInEth ) < _user.depositOn1, "bigger than your balance");
+        require((amountInEth ) <= _user.depositOn1, "bigger than your balance");
         num1pool -= amountInEth;
         _user.depositOn1 -= amountInEth;
 
         address payable who = payable(msg.sender);
         who.transfer((amountInEth * (100 - fee) / 100) - PercentPool);
+
+        updateVariables(num1pool, num2pool, num3pool);
  
         emit Withdraw(msg.sender, amountInEth, "withdrawed from pool1");
 
@@ -236,7 +226,9 @@ contract Bet {
 
         address payable who = payable(msg.sender);
         who.transfer((amountInEth * (100 - fee) / 100) - PercentPool);
- 
+
+        updateVariables(num1pool, num2pool, num3pool);
+
         emit Withdraw(msg.sender, amount_, "withdrawed from pool2");
        
     }
@@ -252,6 +244,8 @@ contract Bet {
 
         address payable who = payable(msg.sender);
         who.transfer((amountInEth * (100 - fee) / 100) - PercentPool);
+
+        updateVariables(num1pool, num2pool, num3pool);
  
         emit Withdraw(msg.sender, amount_, "withdrawed from team3 pool");
 
@@ -271,9 +265,12 @@ contract Bet {
             Users[users[i]].depositOn3 = 0;
 
         }
+        sendRewardTime = block.timestamp;
+        
         num1pool = 0;
         num2pool = 0;
         num3pool = 0;
+        updateVariables(num1pool, num2pool, num3pool);
     }
 
 
@@ -303,16 +300,21 @@ contract Bet {
                 // require(Users[users[i]].depositOn1 > 0, "not value");
                 amount = Users[users[i]].depositOn1 * lev1 ;
                 users[i].transfer(amount * (100 - fee) / 100);
+                Users[users[i]].depositOn1 = 0;
                 
-            } else if ( answer == 2) {
+            }
+            if ( answer == 2) {
                 // require(Users[users[i]].depositOnDraw > 0, "not value");
                 amount = Users[users[i]].depositOn2 * lev2 ;
                 users[i].transfer(amount * (100 - fee) / 100);
+                Users[users[i]].depositOn2 = 0;
         
-            } else if ( answer == 3) {
+            }
+            if ( answer == 3) {
                 // require(Users[users[i]].depositOn2 > 0, "not value");
                 amount = Users[users[i]].depositOn3 * lev3 ;
                 users[i].transfer(amount * (100 - fee) / 100);
+                Users[users[i]].depositOn3 = 0;
             }
 
             sendRewardTime = block.timestamp;
@@ -322,7 +324,7 @@ contract Bet {
            
 
     }
-    function claimThisMatchFee() payable external onlyOwner{
+    function claimFirstValuePlusFee() payable external onlyOwner{
         require(block.timestamp >= sendRewardTime, "user's reward not sended yet!");
 
 
